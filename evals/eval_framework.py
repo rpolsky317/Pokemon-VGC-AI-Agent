@@ -1,20 +1,70 @@
 import json
-from evals.eval_models import EvalResult, ToolAssertionResult, ArgumentAssertionResult
 
+from evals.eval_models import (
+    EvalResult,
+    ToolAssertionResult,
+    ArgumentAssertionResult
+)
+
+
+# ============================================================
+# EVAL CONTEXT
+# ============================================================
 
 class EvalContext:
 
-    def __init__(self, agent, response):
-        self.agent = agent
+    def __init__(
+        self,
+        agents,
+        response
+    ):
+        self.agents = agents
         self.response = response
-        self.tool_calls = getattr(
+
+
+    def get_agent(
+        self,
+        agent_name
+    ):
+        agent = self.agents.get(
+            agent_name
+        )
+
+        if agent is None:
+            raise ValueError(
+                f"Unknown agent: {agent_name}. "
+                f"Available agents: "
+                f"{list(self.agents.keys())}"
+            )
+
+        return agent
+
+
+    def get_tool_calls(
+        self,
+        agent_name
+    ):
+        agent = self.get_agent(
+            agent_name
+        )
+
+        return getattr(
             agent,
             "tool_call_history",
             []
         )
 
-    def first_call_to(self, tool_name):
-        for call in self.tool_calls:
+
+    def first_call_to(
+        self,
+        tool_name,
+        agent_name
+    ):
+        tool_calls = self.get_tool_calls(
+            agent_name
+        )
+
+        for call in tool_calls:
 
             if call["name"] != tool_name:
                 continue
@@ -24,8 +74,13 @@ class EvalContext:
                 {}
             )
 
-            if isinstance(arguments, str):
-                arguments = json.loads(arguments)
+            if isinstance(
+                arguments,
+                str
+            ):
+                arguments = json.loads(
+                    arguments
+                )
 
             return arguments
 
@@ -66,11 +121,15 @@ class ToolAssertion:
     def __init__(
         self,
         context,
-        tool_name
+        tool_name,
+        agent_name
     ):
         self.context = context
         self.tool_name = tool_name
+        self.agent_name = agent_name
+
         self.argument_assertions = []
+
 
     def with_argument(
         self,
@@ -78,14 +137,20 @@ class ToolAssertion:
         expected
     ):
         self.argument_assertions.append(
-            (path, expected)
+            (
+                path,
+                expected
+            )
         )
 
         return self
 
+
     def evaluate(self):
+
         arguments = self.context.first_call_to(
-            self.tool_name
+            tool_name=self.tool_name,
+            agent_name=self.agent_name
         )
 
         # --------------------------------------------------
@@ -96,11 +161,14 @@ class ToolAssertion:
 
             return ToolAssertionResult(
                 tool_name=self.tool_name,
+                agent_name=self.agent_name,
                 passed=False,
                 reason=(
-                    f"{self.tool_name} tool was not called"
+                    f"{self.tool_name} tool was not called "
+                    f"by {self.agent_name} agent"
                 )
             )
+
 
         # --------------------------------------------------
         # Tool was called
@@ -115,16 +183,43 @@ class ToolAssertion:
                 path
             )
 
-            path_string = ".".join(path)
+            path_string = ".".join(
+                path
+            )
 
             # --------------------------------------------------
             # Compare values
             # --------------------------------------------------
 
-            if isinstance(actual, list) and isinstance(expected, list):
-                passed = set(actual) == set(expected)
+            if isinstance(actual, str) and isinstance(expected, str):
+                passed = (
+                    actual.casefold()
+                    ==
+                    expected.casefold()
+                )
+
+            elif isinstance(actual, list) and isinstance(expected, list):
+
+                passed = (
+                    {
+                        item.casefold()
+                        if isinstance(item, str)
+                        else item
+                        for item in actual
+                    }
+                    ==
+                    {
+                        item.casefold()
+                        if isinstance(item, str)
+                        else item
+                        for item in expected
+                    }
+                )
+
             else:
+
                 passed = actual == expected
+
 
             # --------------------------------------------------
             # Build result
@@ -136,6 +231,7 @@ class ToolAssertion:
                 f"{expected!r}, and was {actual!r}."
             )
 
+
             argument_results.append(
                 ArgumentAssertionResult(
                     path=path,
@@ -144,23 +240,33 @@ class ToolAssertion:
                 )
             )
 
+
         return ToolAssertionResult(
             tool_name=self.tool_name,
+            agent_name=self.agent_name,
             passed=True,
             reason=(
-                f"{self.tool_name} tool was called"
+                f"{self.tool_name} tool was called "
+                f"by {self.agent_name} agent"
             ),
             arguments=argument_results
         )
 
+
     @staticmethod
-    def _get_path(data, path):
+    def _get_path(
+        data,
+        path
+    ):
 
         current = data
 
         for key in path:
 
-            if not isinstance(current, dict):
+            if not isinstance(
+                current,
+                dict
+            ):
                 return None
 
             if key not in current:
@@ -172,31 +278,49 @@ class ToolAssertion:
 
 class EvalAssertions:
 
-    def __init__(self, context):
+    def __init__(
+        self,
+        context
+    ):
         self.context = context
+
         self.tool_assertions = []
 
-    def tool_was_called(self, tool_name):
+
+    def tool_was_called(
+        self,
+        tool_name,
+        agent_name="orchestrator"
+    ):
 
         assertion = ToolAssertion(
             context=self.context,
-            tool_name=tool_name
+            tool_name=tool_name,
+            agent_name=agent_name
         )
 
-        self.tool_assertions.append(assertion)
+        self.tool_assertions.append(
+            assertion
+        )
 
         return assertion
 
-    def evaluate(self, name):
+
+    def evaluate(
+        self,
+        name
+    ):
 
         results = [
             assertion.evaluate()
-            for assertion in self.tool_assertions
+            for assertion
+            in self.tool_assertions
         ]
 
         passed = all(
             result.overall_passed
-            for result in results
+            for result
+            in results
         )
 
         return EvalResult(

@@ -1,44 +1,32 @@
-import json
-from models.damage_calc_request import DamageCalculationRequest
 
-class ToolDispatcher:
+class BattleStateToolsDispatcher:
+
     """
     Provides a list of tools available to the AI agent.
     """
 
-    def __init__(self, pokemon_service, battle_state_service, damage_calc_service, battle_state_agent):
-        self.pokemon_service = pokemon_service
+    def __init__(self, battle_state_service):
         self.battle_state_service = battle_state_service
-        self.damage_calc_service = damage_calc_service
-        self.battle_state_agent = battle_state_agent
 
     def dispatch(self, tool_name, arguements):
         """
         Execute a tool requested by the AI agent.
         """
-
-        if tool_name  == "battle_state_agent":
-            print("delegating task to battle state agent\n")
-            return self.battle_state_agent.run(
-                arguements["request"]
-            )
-
-        if tool_name == "get_pokemon_info":
-            return self.get_pokemon_info(
-                pokemon_name=arguements["pokemon_name"]
-            )
+        
+        if tool_name == "get_battle_state":
+            return self.get_battle_state()
         
         if tool_name == "add_opponent_pokemon":
             return self.add_opponent_pokemon(
                 pokemon_names=arguements["pokemon_names"]
             )
-        if tool_name == "update_pokemon_battle_state":
+        if tool_name== "update_pokemon_battle_state":
             return self.update_pokemon_state(
                 pokemon_name=arguements["pokemon_name"],
                 side=arguements["side"],
                 updates=arguements["updates"]
             )
-
+        
         if tool_name == "update_battle_field":
             return self.update_field(
                 weather=arguements.get("weather"),
@@ -47,28 +35,9 @@ class ToolDispatcher:
                 opponent_side=arguements.get("opponent_side")
             )
 
-        if tool_name == "calculate_damage":
-            request = DamageCalculationRequest.from_dict(arguements)
-
-            return self.calculate_damage(
-                request=request
-            )
-
         raise ValueError(
             f"Unknown tool: {tool_name}"
         )
-
-    def get_pokemon_info(self, pokemon_name):
-        """
-        Returns information about a specific pokemon.
-        """
-        return self.pokemon_service.get_pokemon_info(pokemon_name)
-    
-    def calculate_damage(self, request): 
-        """ 
-        Calculates damage using the Pokemon Champions damage calculator. 
-        """ 
-        return self.damage_calc_service.calculate(request)
     
     def get_battle_state(self):
         """

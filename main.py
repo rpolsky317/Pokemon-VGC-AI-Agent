@@ -1,6 +1,7 @@
 
 from agent.agent_factory import create_agent
 from models.pokemon_state import PokemonState
+import traceback
 
 # --------------------------------------------------
 # Setup agent
@@ -74,6 +75,16 @@ while True:
 
     except Exception as error:
         print()
-        print("ERROR:")
-        print(error)
+        print("=" * 60)
+        print("ERROR")
+        print("=" * 60)
+
+        print(f"Error type: {type(error).__name__}")
+        print(f"Error message: {error}")
+
+        print()
+        print("TRACEBACK:")
+        traceback.print_exc()
+
+        print("=" * 60)
         print()

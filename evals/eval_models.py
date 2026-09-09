@@ -11,9 +11,10 @@ class ArgumentAssertionResult:
 @dataclass
 class ToolAssertionResult:
     tool_name: str
+    agent_name: str
     passed: bool
     reason: str
-    arguments: list[ArgumentAssertionResult] = field(
+    arguments: list = field(
         default_factory=list
     )
 
@@ -32,7 +33,7 @@ class ToolAssertionResult:
 class EvalResult:
     name: str
     passed: bool
-    tool_assertions: list["ToolAssertionResult"]
+    tool_assertions: list[ToolAssertionResult]
 
     def print(self):
 

@@ -988,7 +988,7 @@ class VGCAgent:
     def run(self, user_message):
 
         response = self.client.responses.create(
-            model="gpt-5.4-mini",
+            model="gpt-5.6",
             instructions=self.instructions,
             input=user_message,
             tools=self.tools

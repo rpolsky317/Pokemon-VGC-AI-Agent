@@ -9,6 +9,11 @@ class BattleStateService:
     def add_opponent_pokemon(self, pokemon_names):
         self.battle_state.add_opponent_pokemon(pokemon_names)
 
+        return {
+            "success": True,
+            "pokemon_added": pokemon_names
+        }
+
     def update_pokemon(
         self,
         pokemon_name,
@@ -20,6 +25,11 @@ class BattleStateService:
             side=side,
             **updates
         )
+
+        return {
+            "success": True,
+            "updated": pokemon_name
+        }
 
     def update_hp(
         self,

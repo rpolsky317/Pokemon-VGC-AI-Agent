@@ -3,14 +3,7 @@ from typing import Callable
 
 from models.pokemon_state import PokemonState
 from evals.eval_framework import EvalAssertions, EvalContext
-
-
-@dataclass
-class EvalResult:
-    name: str
-    passed: bool
-    reason: str
-    subtest_results: list[str]
+from evals.eval_models import EvalResult
 
 
 class AgentEvalRunner:
@@ -102,9 +95,9 @@ class AgentEvalRunner:
 
 def eval_opponent_team_entry(agent, response):
 
-    context = EvalContext(
-        agent=agent,
-        response=response
+    context = create_eval_context(
+        agent,
+        response
     )
 
     assertions = EvalAssertions(context)
@@ -118,15 +111,152 @@ def eval_opponent_team_entry(agent, response):
         "whimsicott"
     }
 
+    assertions.tool_was_called(
+        "battle_state_agent",
+        agent_name="orchestrator"
+    )
+
     
-    assertions \
-        .tool_was_called("add_opponent_pokemon") \
-        .with_argument(
+    assertions.tool_was_called(
+        "add_opponent_pokemon",
+        agent_name="battle_state"
+    ).with_argument(
             ["pokemon_names"],
             list(expected_pokemon)
         )
     
     return assertions.evaluate("eval_opponent_team_entry")
+
+def eval_field_weather(agent, response):
+
+    context = create_eval_context(
+        agent,
+        response
+    )
+
+    assertions = EvalAssertions(context)
+
+    # check the we designated to the battle agent.
+    assertions.tool_was_called(
+        "battle_state_agent",
+        agent_name="orchestrator"
+    )
+
+    
+    assertions \
+        .tool_was_called(
+            "update_battle_field",
+            agent_name="battle_state"
+        ) \
+        .with_argument(
+            ["weather"],
+            "sun"
+        ) \
+    
+    return assertions.evaluate("eval_field_weather")
+
+def eval_pokemon_state_item(agent, response):
+
+    context = create_eval_context(
+        agent,
+        response
+    )
+
+    assertions = EvalAssertions(context)
+
+    # check the we designated to the battle agent.
+    assertions.tool_was_called(
+        "battle_state_agent",
+        agent_name="orchestrator"
+    )
+
+    # Check that the battle state agent
+    # updated the Pokemon.
+    assertions \
+        .tool_was_called(
+            "update_pokemon_battle_state",
+            agent_name="battle_state"
+        ) \
+        .with_argument(
+            ["pokemon_name"],
+            "Whimsicott"
+        ) \
+        .with_argument(
+            ["side"],
+            "my"
+        ) \
+        .with_argument(
+            ["updates", "item"],
+            "Light Clay"
+        )
+    
+    return assertions.evaluate("eval_pokemon_state_item")
+
+
+def eval_tailwind(agent, response):
+
+    context = create_eval_context(
+        agent,
+        response
+    )
+
+    assertions = EvalAssertions(context)
+
+    # Check that the orchestrator delegated
+    # to the battle state agent.
+    assertions.tool_was_called(
+        "battle_state_agent",
+        agent_name="orchestrator"
+    )
+
+
+    # Check that Tailwind was updated.
+    assertions \
+        .tool_was_called(
+            "update_battle_field",
+            agent_name="battle_state"
+        ) \
+        .with_argument(
+            ["my_side", "tailwind"],
+            True
+        )
+
+
+    return assertions.evaluate(
+        "eval_tailwind"
+    )
+
+def eval_reflect(agent, response):
+
+    context = create_eval_context(
+        agent,
+        response
+    )
+
+    assertions = EvalAssertions(context)
+
+    # Check orchestrator delegation.
+    assertions.tool_was_called(
+        "battle_state_agent",
+        agent_name="orchestrator"
+    )
+
+
+    # Check Reflect was updated.
+    assertions \
+        .tool_was_called(
+            "update_battle_field",
+            agent_name="battle_state"
+        ) \
+        .with_argument(
+            ["opponent_side", "reflect"],
+            True
+        )
+
+
+    return assertions.evaluate(
+        "eval_reflect"
+    )
 
 
 def eval_fastest_opponent(agent, response):
@@ -198,15 +328,23 @@ def eval_fastest_opponent(agent, response):
 
 def eval_damage_calculation(agent, response):
 
-    context = EvalContext(
-        agent=agent,
-        response=response
+    context = create_eval_context(
+        agent,
+        response
     )
 
     assertions = EvalAssertions(context)
 
+    assertions.tool_was_called(
+        "damage_calc_agent",
+        agent_name="orchestrator"
+    )
+
     assertions \
-        .tool_was_called("calculate_damage") \
+        .tool_was_called(
+            "calculate_damage",
+            agent_name="damage_calc"
+        ) \
         .with_argument(
             ["attacker", "species"],
             "Incineroar"
@@ -282,6 +420,28 @@ def create_agent():
         opponent_pokemon
     )
 
+def create_eval_context(
+    agent,
+    response
+):
+
+    return EvalContext(
+        agents={
+            "orchestrator": agent,
+
+            "battle_state":
+                agent.tool_dispatcher.battle_state_agent
+
+            # "damage_calc":
+            #     agent.tool_dispatcher.damage_calc_agent,
+
+            # "pokemon_info":
+            #     agent.tool_dispatcher.pokemon_info_agent
+        },
+
+        response=response
+    )
+
 
 # ============================================================
 # RUN EVALS
@@ -303,6 +463,40 @@ if __name__ == "__main__":
         evaluator=eval_opponent_team_entry
     )
 
+    runner.run_eval(
+        name="eval_field_weather",
+        prompt=(
+            "My opponent has set up the sun."
+        ),
+        evaluator=eval_field_weather
+    )
+
+    runner.run_eval(
+        name="eval_pokemon_state_item",
+        prompt=(
+            "My whimsicott is holding the light clay item."
+        ),
+        evaluator=eval_pokemon_state_item
+    )
+
+    runner.run_eval(
+        name="tailwind",
+        prompt=(
+            "I set up Tailwind on my side. "
+            "Please note this in the battle state."
+        ),
+        evaluator=eval_tailwind
+    )
+
+    runner.run_eval(
+        name="reflect",
+        prompt=(
+            "The opponent has set up Reflect. "
+            "Please note this in the battle state."
+        ),
+        evaluator=eval_reflect
+    )
+
     # runner.run_eval(
     #     name="fastest_opponent",
     #     prompt=(
@@ -313,15 +507,15 @@ if __name__ == "__main__":
     #     evaluator=eval_fastest_opponent
     # )
 
-    runner.run_eval(
-        name="damage_calculation",
-        prompt=(
-            "Can Adamant 32-attack-point Incineroar holding a life orb KO "
-            "a 0-stat-point Sneasler with Flare Blitz "
-            "while the sun is up?"
-        ),
-        evaluator=eval_damage_calculation
-    )
+    # runner.run_eval(
+    #     name="damage_calculation",
+    #     prompt=(
+    #         "Can Adamant 32-attack-point Incineroar holding a life orb KO "
+    #         "a 0-stat-point Sneasler with Flare Blitz "
+    #         "while the sun is up?"
+    #     ),
+    #     evaluator=eval_damage_calculation
+    # )
 
     # runner.run_eval(
     #     name="no_invented_terrain",
