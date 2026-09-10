@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable
-
+import traceback
 from models.pokemon_state import PokemonState
 from evals.eval_framework import EvalAssertions, EvalContext
 from evals.eval_models import EvalResult
@@ -38,7 +38,20 @@ class AgentEvalRunner:
                 tool_assertions=[]
             )
 
-            print(f"  EXCEPTION - {e}")
+            print()
+            print("=" * 60)
+            print("ERROR")
+            print("=" * 60)
+
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error message: {e}")
+
+            print()
+            print("TRACEBACK:")
+            traceback.print_exc()
+
+            print("=" * 60)
+            print()
 
         self.results.append(result)
 
@@ -90,7 +103,7 @@ class AgentEvalRunner:
 
 
 # ============================================================
-# EVALS
+# Battle State Evals
 # ============================================================
 
 def eval_opponent_team_entry(agent, response):
@@ -258,6 +271,95 @@ def eval_reflect(agent, response):
         "eval_reflect"
     )
 
+def eval_field_weather(agent, response):
+
+    context = create_eval_context(
+        agent,
+        response
+    )
+
+    assertions = EvalAssertions(context)
+
+    # check the we designated to the battle agent.
+    assertions.tool_was_called(
+        "battle_state_agent",
+        agent_name="orchestrator"
+    )
+
+    
+    assertions \
+        .tool_was_called(
+            "update_battle_field",
+            agent_name="battle_state"
+        ) \
+        .with_argument(
+            ["weather"],
+            "sun"
+        ) \
+    
+    return assertions.evaluate("eval_field_weather")
+
+
+# --------------------------------------------------
+# Pokemon Info Evals
+# --------------------------------------------------
+
+
+def eval_pokemon_stats(agent, response):
+
+    context = create_eval_context(
+        agent,
+        response
+    )
+
+    assertions = EvalAssertions(context)
+
+    # check the we designated to the battle agent.
+    assertions.tool_was_called(
+        "pokemon_info_agent",
+        agent_name="orchestrator"
+    )
+
+    
+    assertions \
+        .tool_was_called(
+            "get_pokemon_info",
+            agent_name="pokemon_info"
+        ) \
+        .with_argument(
+            ["pokemon_name"],
+            "Charizard"
+        ) \
+    
+    return assertions.evaluate("eval_pokemon_stats")
+
+def eval_pokemon_moves(agent, response):
+
+    context = create_eval_context(
+        agent,
+        response
+    )
+
+    assertions = EvalAssertions(context)
+
+    # check the we designated to the battle agent.
+    assertions.tool_was_called(
+        "pokemon_info_agent",
+        agent_name="orchestrator"
+    )
+    
+    assertions \
+        .tool_was_called(
+            "get_pokemon_info",
+            agent_name="pokemon_info"
+        ) \
+        .with_argument(
+            ["pokemon_name"],
+            "Charizard"
+        ) \
+    
+    return assertions.evaluate("eval_pokemon_moves")
+
 
 def eval_fastest_opponent(agent, response):
 
@@ -325,6 +427,9 @@ def eval_fastest_opponent(agent, response):
         .passed()
     )
 
+# ============================================================
+# Damage Calc Evals
+# ============================================================
 
 def eval_damage_calculation(agent, response):
 
@@ -430,13 +535,13 @@ def create_eval_context(
             "orchestrator": agent,
 
             "battle_state":
-                agent.tool_dispatcher.battle_state_agent
+                agent.tool_dispatcher.battle_state_agent,
 
             # "damage_calc":
             #     agent.tool_dispatcher.damage_calc_agent,
 
-            # "pokemon_info":
-            #     agent.tool_dispatcher.pokemon_info_agent
+            "pokemon_info":
+                agent.tool_dispatcher.pokemon_info_agent
         },
 
         response=response
@@ -453,48 +558,72 @@ if __name__ == "__main__":
         agent_factory=create_agent
     )
 
+    # runner.run_eval(
+    #     name="opponent_team_entry",
+    #     prompt=(
+    #         "My opponent has charizard, raichu, pelipper, "
+    #         "sneasler, incineroar, and whimsicott. "
+    #         "Please note this in the battle state."
+    #     ),
+    #     evaluator=eval_opponent_team_entry
+    # )
+
+    # runner.run_eval(
+    #     name="eval_field_weather",
+    #     prompt=(
+    #         "My opponent has set up the sun."
+    #     ),
+    #     evaluator=eval_field_weather
+    # )
+
+    # runner.run_eval(
+    #     name="eval_pokemon_state_item",
+    #     prompt=(
+    #         "My whimsicott is holding the light clay item."
+    #     ),
+    #     evaluator=eval_pokemon_state_item
+    # )
+
+    # runner.run_eval(
+    #     name="tailwind",
+    #     prompt=(
+    #         "I set up Tailwind on my side. "
+    #         "Please note this in the battle state."
+    #     ),
+    #     evaluator=eval_tailwind
+    # )
+
+    # runner.run_eval(
+    #     name="reflect",
+    #     prompt=(
+    #         "The opponent has set up Reflect. "
+    #         "Please note this in the battle state."
+    #     ),
+    #     evaluator=eval_reflect
+    # )
+
     runner.run_eval(
-        name="opponent_team_entry",
+        name="pokemon stats",
         prompt=(
-            "My opponent has charizard, raichu, pelipper, "
-            "sneasler, incineroar, and whimsicott. "
-            "Please note this in the battle state."
+            "How fast is Charizard?"
         ),
-        evaluator=eval_opponent_team_entry
+        evaluator=eval_pokemon_stats
     )
 
     runner.run_eval(
-        name="eval_field_weather",
+        name="pokemon moves",
         prompt=(
-            "My opponent has set up the sun."
+            "What moves does Charizard have?"
         ),
-        evaluator=eval_field_weather
+        evaluator=eval_pokemon_moves
     )
 
     runner.run_eval(
-        name="eval_pokemon_state_item",
+        name="pokemon moves",
         prompt=(
-            "My whimsicott is holding the light clay item."
+            "What moves does Charizard have?"
         ),
-        evaluator=eval_pokemon_state_item
-    )
-
-    runner.run_eval(
-        name="tailwind",
-        prompt=(
-            "I set up Tailwind on my side. "
-            "Please note this in the battle state."
-        ),
-        evaluator=eval_tailwind
-    )
-
-    runner.run_eval(
-        name="reflect",
-        prompt=(
-            "The opponent has set up Reflect. "
-            "Please note this in the battle state."
-        ),
-        evaluator=eval_reflect
+        evaluator=eval_pokemon_moves
     )
 
     # runner.run_eval(

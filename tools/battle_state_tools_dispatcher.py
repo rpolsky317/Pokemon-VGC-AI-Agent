@@ -8,7 +8,7 @@ class BattleStateToolsDispatcher:
     def __init__(self, battle_state_service):
         self.battle_state_service = battle_state_service
 
-    def dispatch(self, tool_name, arguements):
+    def dispatch(self, tool_name, arguments):
         """
         Execute a tool requested by the AI agent.
         """
@@ -18,21 +18,21 @@ class BattleStateToolsDispatcher:
         
         if tool_name == "add_opponent_pokemon":
             return self.add_opponent_pokemon(
-                pokemon_names=arguements["pokemon_names"]
+                pokemon_names=arguments["pokemon_names"]
             )
         if tool_name== "update_pokemon_battle_state":
             return self.update_pokemon_state(
-                pokemon_name=arguements["pokemon_name"],
-                side=arguements["side"],
-                updates=arguements["updates"]
+                pokemon_name=arguments["pokemon_name"],
+                side=arguments["side"],
+                updates=arguments["updates"]
             )
         
         if tool_name == "update_battle_field":
             return self.update_field(
-                weather=arguements.get("weather"),
-                terrain=arguements.get("terrain"),
-                my_side=arguements.get("my_side"),
-                opponent_side=arguements.get("opponent_side")
+                weather=arguments.get("weather"),
+                terrain=arguments.get("terrain"),
+                my_side=arguments.get("my_side"),
+                opponent_side=arguments.get("opponent_side")
             )
 
         raise ValueError(

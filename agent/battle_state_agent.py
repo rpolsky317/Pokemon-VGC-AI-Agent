@@ -1,6 +1,4 @@
-from openai import OpenAI
 from agent.base_agent import BaseAgent
-from dotenv import load_dotenv
 
 class BattleStateAgent(BaseAgent):
 

@@ -2,6 +2,7 @@ from agent.vgc_agent import VGCAgent
 from agent.orchestrator_agent import OrchestratorAgent
 from tools.tool_dispatcher import ToolDispatcher
 from tools.battle_state_tools_dispatcher import BattleStateToolsDispatcher
+from tools.pokemon_info_tools_dispatcher import PokemonInfoToolDispatcher
 
 from services.pokemon_info_service import PokemonInfoService
 from services.move_service import MoveService
@@ -17,6 +18,7 @@ from clients.damage_calc_client import DamageCalcClient
 from models.battle_state import BattleState
 
 from agent.battle_state_agent import BattleStateAgent
+from agent.pokemon_info_agent import PokemonInfoAgent
 
 
 def create_agent(
@@ -82,6 +84,18 @@ def create_agent(
         battle_state_tool_dispatcher
     )
 
+    # -----------------------------------------
+    # Pokemon Information Agent
+    # -----------------------------------------
+
+    pokemon_info_tool_dispatcher = PokemonInfoToolDispatcher(
+        pokemon_service=pokemon_service,
+    )
+
+    pokemon_info_agent = PokemonInfoAgent(
+        pokemon_info_tool_dispatcher
+    )
+
     # --------------------------------------------------
     # Setup tool dispatcher
     # --------------------------------------------------
@@ -90,7 +104,8 @@ def create_agent(
         pokemon_service=pokemon_service,
         battle_state_service=battle_state_service,
         damage_calc_service=damage_calc_service,
-        battle_state_agent=battle_state_agent
+        battle_state_agent=battle_state_agent,
+        pokemon_info_agent=pokemon_info_agent
     )
 
     # --------------------------------------------------

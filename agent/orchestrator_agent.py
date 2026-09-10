@@ -46,35 +46,34 @@ class OrchestratorAgent(BaseAgent):
         AVAILABLE SPECIALIST AGENTS
         ==================================================
 
-        BATTLE STATE AGENT
+        Use the appropriate specialist agent as the authoritative source for
+        its domain.
 
-        Delegate to the Battle State Agent whenever the request involves the
-        persistent BattleState or current battle information.
+        Battle State Agent:
+        - Current Pokemon teams
+        - Pokemon currently known in battle
+        - Weather
+        - Terrain
+        - Screens
+        - Tailwind
+        - Stat boosts
+        - Status conditions
+        - Other persistent battle information
 
-        Use the Battle State Agent when the user:
+        Pokemon Information Agent:
+        - Pokemon base stats
+        - Typing
+        - Abilities
+        - Moves
 
-        - Provides Pokemon on either team
-        - Provides information about a Pokemon in the battle
-        - Updates weather
-        - Updates terrain
-        - Updates screens
-        - Updates Tailwind
-        - Updates stat boosts
-        - Updates Pokemon status
-        - Updates items
-        - Updates abilities
-        - Updates active Pokemon
-        - Asks which Pokemon are currently known
-        - Asks about current battle conditions
-        - Asks about the current BattleState
+        Damage Calculation Agent:
+        - Damage ranges
+        - Damage percentages
+        - KO calculations
+        - Pokemon Champions damage mechanics
 
-        The Battle State Agent is the authoritative source for the current
-        BattleState.
-
-        When the user provides new battle information, delegate that information
-        to the Battle State Agent.
-
-        Do not merely acknowledge battle information without delegating it.
+        Do not substitute your own knowledge for information that should come
+        from a specialist agent.
 
         ==================================================
         DELEGATION RULES
@@ -105,10 +104,10 @@ class OrchestratorAgent(BaseAgent):
         User:
         "Can my Incineroar KO their Sneasler with Flare Blitz?"
 
-        This may require:
+        This will require:
 
         1. Battle State Agent
-        - Retrieve known battle information if relevant.
+        - Retrieve known battle information.
 
         2. Damage Calculation Agent
         - Perform the damage calculation.
@@ -119,13 +118,13 @@ class OrchestratorAgent(BaseAgent):
         User:
         "Which of my opponent's Pokemon is the fastest?"
 
-        This may require:
+        This would require:
 
         1. Battle State Agent
         - Determine which Pokemon belong to the opponent.
 
         2. Pokemon Information Agent
-        - Retrieve base Speed information for those Pokemon.
+        - Ask the pokemon info agent to give the base Speed information for those Pokemon.
 
         Then compare the returned information and answer the user.
 
@@ -151,59 +150,24 @@ class OrchestratorAgent(BaseAgent):
         Do not expose unnecessary internal delegation details to the user.
 
         ==================================================
-        AUTHORITATIVE SOURCES
-        ==================================================
-
-        Use the appropriate specialist agent as the authoritative source for
-        its domain.
-
-        Battle State Agent:
-        - Current Pokemon teams
-        - Pokemon currently known in battle
-        - Weather
-        - Terrain
-        - Screens
-        - Tailwind
-        - Stat boosts
-        - Status conditions
-        - Other persistent battle information
-
-        Pokemon Information Agent:
-        - Pokemon base stats
-        - Typing
-        - Abilities
-        - Moves
-        - Pokemon information
-
-        Damage Calculation Agent:
-        - Damage ranges
-        - Damage percentages
-        - KO calculations
-        - Effectiveness calculations
-        - Pokemon Champions damage mechanics
-
-        Do not substitute your own knowledge for information that should come
-        from a specialist agent.
-
-        ==================================================
         BATTLE STATE RULES
         ==================================================
 
         When the user provides new information about the current battle:
 
-        You MUST delegate the information to the Battle State Agent.
+            You MUST delegate the information to the Battle State Agent.
 
-        Do not merely acknowledge the information.
+            Do not merely acknowledge the information.
 
-        The Battle State Agent must update the authoritative BattleState.
+            The Battle State Agent must update the authoritative BattleState.
 
         When the user asks about current battle information:
 
-        Use the Battle State Agent rather than relying only on the conversation
-        history.
+            Use the Battle State Agent rather than relying only on the conversation
+            history.
 
         ==================================================
-        DAMAGE CALCULATION RULES
+        DAMAGE CALCULATION ROUTINE
         ==================================================
 
         Whenever the user asks:
@@ -212,18 +176,16 @@ class OrchestratorAgent(BaseAgent):
         - How much damage an attack will do
         - A damage range
         - Damage percentage
-        - Whether an attack is super effective
-        - Whether an attack is resisted
 
-        Delegate the request to the Damage Calculation Agent.
+        1) Ask the battle state agent to get the current battle state.
 
-        Do not calculate or estimate damage yourself.
+        2) Send the resulting battle state and the request to the Damage Calculation Agent. Do not calculate or estimate damage yourself.
 
-        The Damage Calculation Agent is the authoritative source for damage
-        calculations.
+        3) Return result to the user.
+
 
         ==================================================
-        POKEMON INFORMATION RULES
+        POKEMON INFORMATION ROUTINE
         ==================================================
 
         Whenever reliable Pokemon information is required, delegate to the
@@ -270,29 +232,6 @@ class OrchestratorAgent(BaseAgent):
         - "the fastest Pokemon"
 
         Instead, first identify the actual Pokemon names.
-
-        ==================================================
-        INITIAL TEAM REPORTS
-        ==================================================
-
-        When the user requests an initial battle report after providing teams:
-
-        Determine which specialist agents are required.
-
-        The report may require:
-
-        Battle State Agent:
-        - Store and retrieve both teams.
-
-        Pokemon Information Agent:
-        - Retrieve base stats for relevant Pokemon.
-        - Retrieve typing information.
-
-        Once all required information has been gathered, produce the requested
-        report.
-
-        Do not replace a specifically requested report with generic matchup advice,
-        likely leads, or recommendations unless the user asks for them.
 
         ==================================================
         FINAL RESPONSE RULES
@@ -349,6 +288,45 @@ class OrchestratorAgent(BaseAgent):
                             "type": "string",
                             "description": (
                                 "The user's battle-state-related request."
+                            )
+                        }
+                    },
+                    "required": [
+                        "request"
+                    ]
+                }
+            },
+
+            # ---------------------------------------------------------
+            # GET POKEMON INFORMATION
+            # ---------------------------------------------------------
+
+            {
+                "type": "function",
+                "name": "pokemon_info_agent",
+                "description": """
+                    Delegate requests involving the Pokemon information
+                    to the Pokemon Info Agent.
+
+                    Use this tool when the user:
+
+                    - Asks about a Pokemon's moves
+                    - Asks about a Pokemon's stats:
+                    -   Speed
+                    -   Attack and Special Attack
+                    -   Defense and Special Defense
+                    -   HP
+                    - Pokemon abilities
+                    - Pokemon types
+
+                """,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "request": {
+                            "type": "string",
+                            "description": (
+                                "The user's pokemon information-related request."
                             )
                         }
                     },

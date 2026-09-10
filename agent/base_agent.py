@@ -13,17 +13,13 @@ class BaseAgent:
     ):
         
         load_dotenv()
-
         self.client = OpenAI(
             api_key=os.getenv("OPENAI_API_KEY")
         )
 
         self.instructions = instructions
-
         self.tools = tools
-
         self.tool_dispatcher = tool_dispatcher
-
         self.tool_call_history = []
         
 
