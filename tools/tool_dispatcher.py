@@ -5,12 +5,13 @@ class ToolDispatcher:
     Provides a list of tools available to the AI agent.
     """
 
-    def __init__(self, pokemon_service, battle_state_service, damage_calc_service, battle_state_agent, pokemon_info_agent):
+    def __init__(self, pokemon_service, battle_state_service, damage_calc_service, battle_state_agent, pokemon_info_agent, damage_calc_agent):
         self.pokemon_service = pokemon_service
         self.battle_state_service = battle_state_service
         self.damage_calc_service = damage_calc_service
         self.battle_state_agent = battle_state_agent
         self.pokemon_info_agent = pokemon_info_agent
+        self.damage_calc_agent = damage_calc_agent
 
     def dispatch(self, tool_name, arguments):
         """
@@ -26,6 +27,12 @@ class ToolDispatcher:
         if tool_name  == "pokemon_info_agent":
             print("Delegating task to pokemon info agent\n")
             return self.pokemon_info_agent.run(
+                arguments["request"]
+            )
+        
+        if tool_name  == "damage_calc_agent":
+            print("Delegating task to damage calc agent\n")
+            return self.damage_calc_agent.run(
                 arguments["request"]
             )
 

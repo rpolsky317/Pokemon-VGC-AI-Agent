@@ -440,10 +440,23 @@ def eval_damage_calculation(agent, response):
 
     assertions = EvalAssertions(context)
 
-    assertions.tool_was_called(
-        "damage_calc_agent",
-        agent_name="orchestrator"
-    )
+    assertions \
+        .tool_was_called(
+            "battle_state_agent",
+            agent_name="orchestrator"
+        )
+
+    assertions \
+        .tool_was_called(
+            "get_battle_state",
+            agent_name="battle_state"
+        )    
+
+    assertions \
+        .tool_was_called(
+            "damage_calc_agent",
+            agent_name="orchestrator"
+        )
 
     assertions \
         .tool_was_called(
@@ -465,12 +478,82 @@ def eval_damage_calculation(agent, response):
         .with_argument(
             ["move", "name"],
             "Flare Blitz"
+        ) \
+        .with_argument(
+            ["field", "weather"],
+            "Sun"
+        ) 
+
+    return assertions.evaluate("eval_damage_calculation")
+
+# Tests that it can load information from battle state.
+def eval_damage_calculation_with_battle_state(agent, response):
+
+    context = create_eval_context(
+        agent,
+        response
+    )
+
+    assertions = EvalAssertions(context)
+
+    assertions \
+        .tool_was_called(
+            "battle_state_agent",
+            agent_name="orchestrator"
         )
 
     assertions \
-        .tool_was_called("get_battle_state")
+        .tool_was_called(
+            "get_battle_state",
+            agent_name="battle_state"
+        )    
 
-    return assertions.evaluate("eval_damage_calculation")
+    assertions \
+        .tool_was_called(
+            "damage_calc_agent",
+            agent_name="orchestrator"
+        )
+
+    assertions \
+        .tool_was_called(
+            "calculate_damage",
+            agent_name="damage_calc"
+        ) \
+        .with_argument(
+            ["attacker", "species"],
+            "Incineroar"
+        ) \
+        .with_argument(
+            ["attacker", "nature"],
+            "Adamant"
+        ) \
+        .with_argument(
+            ["attacker", "item"],
+            "Life Orb"
+        ) \
+        .with_argument(
+            ["move", "name"],
+            "Flare Blitz"
+        ) \
+        .with_argument(
+            ["defender", "species"],
+            "Whimsicott"
+        ) \
+        .with_argument(
+            ["defender", "nature"],
+            "Modest"
+        ) \
+        .with_argument(
+            ["defender", "statPoints", "spd"],
+            32
+        ) \
+        .with_argument(
+            ["field", "weather"],
+            "None"
+        ) 
+        
+
+    return assertions.evaluate("eval_damage_calculation_with_battle_state")
 
 
 # ============================================================
@@ -537,8 +620,8 @@ def create_eval_context(
             "battle_state":
                 agent.tool_dispatcher.battle_state_agent,
 
-            # "damage_calc":
-            #     agent.tool_dispatcher.damage_calc_agent,
+            "damage_calc":
+                agent.tool_dispatcher.damage_calc_agent,
 
             "pokemon_info":
                 agent.tool_dispatcher.pokemon_info_agent
@@ -602,29 +685,21 @@ if __name__ == "__main__":
     #     evaluator=eval_reflect
     # )
 
-    runner.run_eval(
-        name="pokemon stats",
-        prompt=(
-            "How fast is Charizard?"
-        ),
-        evaluator=eval_pokemon_stats
-    )
+    # runner.run_eval(
+    #     name="pokemon stats",
+    #     prompt=(
+    #         "How fast is Charizard?"
+    #     ),
+    #     evaluator=eval_pokemon_stats
+    # )
 
-    runner.run_eval(
-        name="pokemon moves",
-        prompt=(
-            "What moves does Charizard have?"
-        ),
-        evaluator=eval_pokemon_moves
-    )
-
-    runner.run_eval(
-        name="pokemon moves",
-        prompt=(
-            "What moves does Charizard have?"
-        ),
-        evaluator=eval_pokemon_moves
-    )
+    # runner.run_eval(
+    #     name="pokemon moves",
+    #     prompt=(
+    #         "What moves does Charizard have?"
+    #     ),
+    #     evaluator=eval_pokemon_moves
+    # )
 
     # runner.run_eval(
     #     name="fastest_opponent",
@@ -645,6 +720,15 @@ if __name__ == "__main__":
     #     ),
     #     evaluator=eval_damage_calculation
     # )
+
+    runner.run_eval(
+        name="damage_calculation with battle state",
+        prompt=(
+            "Can Adamant 32-attack-point Incineroar holding a life orb KO "
+            "my whimsicott with Flare Blitz?"
+        ),
+        evaluator=eval_damage_calculation_with_battle_state
+    )
 
     # runner.run_eval(
     #     name="no_invented_terrain",

@@ -102,7 +102,7 @@ class OrchestratorAgent(BaseAgent):
 
 
         User:
-        "Can my Incineroar KO their Sneasler with Flare Blitz?"
+        "Can my Incineroar KO their Assault Vest Sneasler with Flare Blitz?"
 
         This will require:
 
@@ -112,7 +112,7 @@ class OrchestratorAgent(BaseAgent):
         2. Damage Calculation Agent
         - Perform the damage calculation.
 
-        Do not attempt to calculate damage yourself.
+        Do not attempt to calculate damage yourself. Do not update the battle state when processing damage calc requests.
 
 
         User:
@@ -132,22 +132,40 @@ class OrchestratorAgent(BaseAgent):
         MULTI-AGENT WORKFLOW
         ==================================================
 
-        Some requests require multiple specialist agents.
+        Some requests, like a damage calculation require multiple specialist agents.
 
         When this happens:
 
-        1. Determine what information is required.
+            - Treat that response as intermediate data.
 
-        2. Delegate each task to the appropriate specialist agent.
+            - Do NOT return that response directly to the user.
 
-        3. Use the results from one specialist agent as context when necessary
-        for another specialist agent.
+            - Continue delegating to the next required specialist.
 
-        4. Combine the specialist results.
+            - Include the relevant result from the previous specialist in the
+            request to the next specialist.
 
-        5. Provide the final answer.
+            Only return a final answer after the complete workflow is finished.
 
-        Do not expose unnecessary internal delegation details to the user.
+
+            Example:
+
+            User
+                ↓
+            Orchestrator
+                ↓
+            Battle State Agent
+                ↓
+            Battle State Result
+                ↓
+            Damage Calculation Agent
+                ↓
+            Damage Result
+                ↓
+            Orchestrator
+                ↓
+            User
+
 
         ==================================================
         BATTLE STATE RULES
@@ -177,11 +195,89 @@ class OrchestratorAgent(BaseAgent):
         - A damage range
         - Damage percentage
 
-        1) Ask the battle state agent to get the current battle state.
+        1) Ask the battle state agent to get the current battle state. 
 
-        2) Send the resulting battle state and the request to the Damage Calculation Agent. Do not calculate or estimate damage yourself.
+        2) NEVER update the battle state for a damage calc request. The evs and items in the request are hyopthetical not actually known. 
 
-        3) Return result to the user.
+        3) Do not return the battle state to the user, treat the result as intermediate data not the final answer.
+
+        3) Send the resulting battle state AND the user's request to the Damage Calculation Agent. Do not calculate or estimate damage yourself.
+
+        4) Return result from the damage calc agent to the user.
+
+
+        ==================================================
+        EXAMPLE DAMAGE CALCULATION
+        ==================================================
+
+        User:
+
+        "Can Adamant 32-attack-point Incineroar holding a Life Orb KO
+        a 0-stat-point Sneasler with Flare Blitz while the sun is up?"
+
+
+        Required workflow:
+
+        1. Call battle_state_agent.
+
+        Request:
+
+        "Return the current authoritative BattleState relevant to this
+        damage calculation. Do not update the BattleState.
+
+        The user request is:
+
+        Can Adamant 32-attack-point Incineroar holding a Life Orb KO
+        a 0-stat-point Sneasler with Flare Blitz while the sun is up?"
+
+
+        2. Receive BattleState.
+
+
+        3. Call damage_calc_agent.
+
+        The request MUST include:
+
+        Original user request:
+
+        "Can Adamant 32-attack-point Incineroar holding a Life Orb KO
+        a 0-stat-point Sneasler with Flare Blitz while the sun is up?"
+
+        AND:
+
+        The authoritative BattleState returned by the Battle State Agent.
+
+
+        4. Receive the damage calculation result.
+
+
+        5. Return the damage calculation result to the user.
+
+
+        ==================================================
+        NEVER STOP EARLY
+==================================================
+
+        Before returning a final answer, verify:
+
+        Does the user's request require another specialist agent?
+
+        If YES:
+
+        DO NOT return yet.
+
+        Continue delegation.
+
+        For damage calculation requests:
+
+        If you have called battle_state_agent but have NOT called
+        damage_calc_agent:
+
+        YOU ARE NOT FINISHED.
+
+        You MUST call damage_calc_agent before returning a final answer.
+
+
 
 
         ==================================================
@@ -327,6 +423,40 @@ class OrchestratorAgent(BaseAgent):
                             "type": "string",
                             "description": (
                                 "The user's pokemon information-related request."
+                            )
+                        }
+                    },
+                    "required": [
+                        "request"
+                    ]
+                }
+            },
+            # ---------------------------------------------------------
+            # GET POKEMON INFORMATION
+            # ---------------------------------------------------------
+
+            {
+                "type": "function",
+                "name": "damage_calc_agent",
+                "description": """
+                    Delegate requests involving damage calculations
+                    to the Damage Calc Agent.
+
+                    Use this tool when the user:
+
+                    - Asks about if a move would KO
+                    - Asks about damage ranges
+                    - Asks if a move would kill a pokemon
+                    - Asks if a pokemon could survive a move
+
+                """,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "request": {
+                            "type": "string",
+                            "description": (
+                                "The user's damage calc-related request."
                             )
                         }
                     },
